@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCare } from './CareContext'
+import { appointments as demoAppointmentSeed, doctors as demoDoctors } from './data'
 import {
   cancelAppointment, careDate, careDateLabel, careTime, listAppointments, listSlots,
   rescheduleAppointment, submitReview
@@ -41,21 +42,75 @@ function ReviewPanel({ appointment, onDone, onCancel }) {
   </form>
 }
 
+function demoIso(dateLabel,timeLabel){
+  const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'}
+  const [mon,dayRaw,year]=dateLabel.replace(',','').split(' ')
+  const [clock,period]=timeLabel.split(' ')
+  let [hour,minute]=clock.split(':').map(Number)
+  if(period==='PM'&&hour!==12)hour+=12
+  if(period==='AM'&&hour===12)hour=0
+  return new Date(`${year}-${months[mon]}-${String(Number(dayRaw)).padStart(2,'0')}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00+05:00`).toISOString()
+}
+
+function getDemoAppointments(){
+  const newlyBooked=JSON.parse(localStorage.getItem('medoraDemoAppointments')||'[]')
+  const base=demoAppointmentSeed.map(a=>{
+    const starts=demoIso(a.date,a.time)
+    const doctor=demoDoctors.find(d=>d.name===a.doctor)
+    return {
+      id:a.id, doctor_id:doctor?.id, doctor_name:a.doctor, starts_at:starts,
+      ends_at:new Date(new Date(starts).getTime()+30*60000).toISOString(),
+      consultation_mode:a.type, reason:a.specialty+' consultation', status:a.status.toLowerCase(),
+      fee_amount:doctor?.fee||0, clinic_name:a.location, demo:true
+    }
+  })
+  const saved=JSON.parse(localStorage.getItem('medoraDemoAppointmentState')||'[]')
+  const map=new Map([...base,...newlyBooked].map(x=>[x.id,x]))
+  saved.forEach(x=>map.set(x.id,{...map.get(x.id),...x}))
+  return [...map.values()].sort((a,b)=>new Date(b.starts_at)-new Date(a.starts_at))
+}
+
+function DemoAppointments(){
+  const [items,setItems]=useState(()=>getDemoAppointments())
+  const [message,setMessage]=useState('')
+  const save=next=>{setItems(next);localStorage.setItem('medoraDemoAppointmentState',JSON.stringify(next))}
+  const change=(id,patch,text)=>{save(items.map(x=>x.id===id?{...x,...patch}:x));setMessage(text)}
+  const cancel=id=>change(id,{status:'cancelled'},'Demo appointment cancelled.')
+  const reschedule=id=>{
+    const item=items.find(x=>x.id===id)
+    if(!item)return
+    const start=new Date(item.starts_at).getTime()+86400000
+    change(id,{starts_at:new Date(start).toISOString(),ends_at:new Date(start+30*60000).toISOString()},'Demo appointment moved forward by one day.')
+  }
+  const review=id=>change(id,{demo_reviewed:true},'Demo review saved.')
+  return <><div className="contentHeader"><div><h2>Your demo appointments</h2><p>Synthetic visits let you test booking, rescheduling, cancellation and review states without real patient data.</p></div><Link className="btn btn-primary" to="/patient/book">Book demo appointment</Link></div>
+    {message&&<div className="notice"><p>{message}</p></div>}
+    <div className="notice demoBookingNotice"><p>Preview-only data is stored in this browser and can be changed freely.</p></div>
+    <div className="tablePanel"><div className="responsiveTable"><div className="tableRow tableHead"><span>Appointment</span><span>Date</span><span>Type</span><span>Status</span><span>Actions</span></div>{items.map(a=>{
+      const future=new Date(a.starts_at)>new Date()
+      return <div className="appointmentRowGroup" key={a.id}><div className="tableRow"><span><strong>{a.doctor_name||demoDoctors.find(d=>d.id===a.doctor_id)?.name||a.clinic_name||'Clinician'}</strong><small>{a.id}</small></span><span><strong>{careDateLabel(a.starts_at)}</strong><small>{careTime(a.starts_at)} · Pakistan time</small></span><span>{a.consultation_mode}</span><span><span className={`badge ${a.status}`}>{a.status}</span></span><span className="liveActions">{['requested','confirmed'].includes(a.status)&&future&&<><button onClick={()=>reschedule(a.id)}>Move +1 day</button><button onClick={()=>cancel(a.id)}>Cancel</button></>}{a.status==='completed'&&<button disabled={a.demo_reviewed} onClick={()=>review(a.id)}>{a.demo_reviewed?'Reviewed':'Add review'}</button>}</span></div></div>
+    })}</div></div>
+  </>
+}
+
 export default function LiveAppointments() {
   const { session, profile, authLoading, doctors } = useCare()
+  const demoMode=!session&&localStorage.getItem('medoraRole')==='patient'
   const [items,setItems]=useState([]),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(''),[refresh,setRefresh]=useState(0)
   const [rescheduling,setRescheduling]=useState(''),[reviewing,setReviewing]=useState(''),[message,setMessage]=useState('')
   useEffect(()=>{
     let active=true
+    if(demoMode){setLoading(false);return}
     if(!session||profile?.role!=='patient'){setLoading(false);return}
     setLoading(true);setError('')
     listAppointments().then(rows=>{if(active)setItems(rows)}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
-  },[session?.user.id,profile?.role,refresh])
+  },[session?.user.id,profile?.role,refresh,demoMode])
   const reload=(text='')=>{setMessage(text);setRescheduling('');setReviewing('');setRefresh(v=>v+1)}
   const cancel=async id=>{setBusy(id);setError('');try{await cancelAppointment(id);reload('Appointment cancelled.')}catch(e){setError(e.message)}finally{setBusy('')}}
+  if(demoMode)return <DemoAppointments/>
   if(authLoading)return <p>Loading your account…</p>
-  if(!session)return <Link className="btn btn-primary" to="/login">Sign in to view appointments</Link>
+  if(!session)return <div className="bookingPane"><h2>Sign in to view live appointments</h2><p>Or open the Patient demo from the sign-in screen to explore synthetic appointment data.</p><Link className="btn btn-primary" to="/login">Sign in</Link></div>
   if(profile?.role!=='patient'||profile.status!=='active')return <p role="alert">An active patient account is required.</p>
   return <><div className="contentHeader"><div><h2>Your appointments</h2><p>Book, reschedule, cancel and review visits saved to your account.</p></div><Link className="btn btn-primary" to="/patient/book">Book appointment</Link></div>
     {message&&<div className="notice"><p>{message}</p></div>}
