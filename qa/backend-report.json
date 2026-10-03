@@ -1,0 +1,63 @@
+{
+  "project": "Healthcare Appointment System",
+  "project_ref": "rjiejqtrffdutrmcvaxg",
+  "run_at": "2026-10-03T11:36:23.379Z",
+  "checks": [
+    {
+      "name": "Auth password login and metadata cannot elevate patient role",
+      "status": "passed"
+    },
+    {
+      "name": "Public specialties and approved doctor directory load",
+      "status": "passed"
+    },
+    {
+      "name": "Anonymous users cannot read private tables or execute booking",
+      "status": "passed"
+    },
+    {
+      "name": "Profile role/status escalation and identity changes are blocked",
+      "status": "passed"
+    },
+    {
+      "name": "Booking rejects doctor role, past dates, null date, empty reason, unsupported mode and invalid availability",
+      "status": "passed"
+    },
+    {
+      "name": "Available slots return actual Karachi-time schedule without private data",
+      "status": "passed"
+    },
+    {
+      "name": "Authenticated RPC persists appointment, database fee, duration and notification",
+      "status": "passed"
+    },
+    {
+      "name": "Other patient and unrelated doctor cannot read another appointment",
+      "status": "passed"
+    },
+    {
+      "name": "Sensitive patient records remain isolated from other patients and unrelated clinicians",
+      "status": "passed"
+    },
+    {
+      "name": "Duplicate booking, fee tampering and direct appointment writes are blocked",
+      "status": "passed"
+    },
+    {
+      "name": "Simultaneous clients can reserve a slot only once",
+      "status": "passed"
+    },
+    {
+      "name": "Occupied slots are removed from public availability",
+      "status": "passed"
+    },
+    {
+      "name": "Cancellation rejects another patient and releases the owner slot",
+      "status": "passed"
+    },
+    {
+      "name": "Unrelated clinicians cannot create records or conversations; forged reviews are rejected",
+      "status": "passed"
+    }
+  ]
+}

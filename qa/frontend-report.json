@@ -1,0 +1,34 @@
+{
+  "run_at": "2026-10-03T11:38:39.609Z",
+  "checks": [
+    {
+      "name": "Unauthenticated frontend cannot confirm a booking",
+      "status": "passed"
+    },
+    {
+      "name": "Four-step browser flow confirms through real book_appointment RPC",
+      "status": "passed"
+    },
+    {
+      "name": "Booked appointment persists after full page reload",
+      "status": "passed"
+    },
+    {
+      "name": "Live appointment list fits tablet and mobile layouts",
+      "status": "passed"
+    },
+    {
+      "name": "Browser cancellation persists through cancel_appointment RPC",
+      "status": "passed"
+    },
+    {
+      "name": "Slot conflict returns to availability without a false confirmation",
+      "status": "passed"
+    },
+    {
+      "name": "No browser runtime errors during real authenticated booking",
+      "status": "passed"
+    }
+  ],
+  "errors": []
+}

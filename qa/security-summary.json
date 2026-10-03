@@ -1,0 +1,29 @@
+{
+  "schema_tables": 17,
+  "rls_enabled": 17,
+  "applied_migrations": [
+    "001_healthcare_schema",
+    "002_reference_seed",
+    "booking_rls_query_indexes"
+  ],
+  "public_security_definer_functions": 0,
+  "anonymous_booking_allowed": false,
+  "direct_appointment_insert_allowed": false,
+  "self_role_update_allowed": false,
+  "overlap_constraint": true,
+  "backend_qa_groups_passed": 14,
+  "live_browser_checks_passed": 7,
+  "presentation_regression_tests_passed": 12,
+  "post_optimization_rls_rpc_smoke_test": "passed",
+  "fixture_cleanup": "passed; all 4 QA users, clinician profiles, appointments and synthetic patient data removed",
+  "remaining_auth_notice": {
+    "name": "Leaked password protection disabled",
+    "url": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+  },
+  "remaining_performance_notice": {
+    "name": "Unused indexes",
+    "level": "INFO",
+    "expected_for": "new empty project with no production workload",
+    "url": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index"
+  }
+}

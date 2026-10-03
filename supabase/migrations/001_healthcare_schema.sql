@@ -228,7 +228,7 @@ create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles(id, role, full_name)
-  values(new.id, coalesce(new.raw_user_meta_data->>'role','patient'), coalesce(new.raw_user_meta_data->>'full_name',''));
+  values(new.id, 'patient', coalesce(new.raw_user_meta_data->>'full_name',''));
   return new;
 end; $$;
 
@@ -316,3 +316,132 @@ begin
 end; $$;
 
 grant execute on function public.book_appointment(uuid,timestamptz,text,text,text) to authenticated;
+
+-- Appended to 001 before first deployment; all changes commit atomically.
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+create extension if not exists btree_gist with schema extensions;
+
+create or replace function private.current_app_role() returns text
+language sql stable security definer set search_path='' as $$
+  select role from public.profiles where id=auth.uid() and status='active';
+$$;
+create or replace function public.current_app_role() returns text
+language sql stable security invoker set search_path='' as $$ select private.current_app_role(); $$;
+
+create or replace function private.handle_new_user() returns trigger
+language plpgsql security definer set search_path='' as $$
+begin
+  insert into public.profiles(id,role,full_name)
+  values(new.id,'patient',coalesce(new.raw_user_meta_data->>'full_name',''));
+  return new;
+end; $$;
+drop trigger on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users for each row execute function private.handle_new_user();
+drop function public.handle_new_user();
+
+-- Column grants protect role/status/verification and immutable identifiers.
+revoke all on all tables in schema public from anon,authenticated;
+grant select on public.specialties,public.doctor_profiles,public.doctor_specialties,public.doctor_availability,public.reviews to anon,authenticated;
+grant select on public.profiles,public.appointments,public.medical_records,public.prescriptions,public.lab_results,public.conversations,public.messages,public.insurance_profiles,public.invoices,public.notifications,public.support_requests,public.audit_events to authenticated;
+grant update(full_name,phone,date_of_birth,gender,city,avatar_url,emergency_contact) on public.profiles to authenticated;
+grant update(professional_title,bio,qualification,license_number,years_experience,consultation_fee,clinic_name,clinic_address,city,languages,consultation_modes) on public.doctor_profiles to authenticated;
+grant insert,update,delete on public.doctor_availability to authenticated;
+grant insert on public.medical_records,public.prescriptions,public.conversations,public.messages,public.reviews,public.support_requests to authenticated;
+grant insert,update,delete on public.insurance_profiles to authenticated;
+grant update(read_at) on public.notifications to authenticated;
+
+drop policy "appointments patient insert" on public.appointments;
+drop policy "appointments participant update" on public.appointments;
+drop policy "doctor availability public read" on public.doctor_availability;
+create policy "doctor availability public read" on public.doctor_availability for select to anon,authenticated using (active and exists(select 1 from public.doctor_profiles d where d.user_id=doctor_id and d.verification_status='verified'));
+drop policy "doctor specialties public read" on public.doctor_specialties;
+create policy "doctor specialties public read" on public.doctor_specialties for select to anon,authenticated using (exists(select 1 from public.doctor_profiles d where d.user_id=doctor_id and d.verification_status='verified'));
+drop policy "doctor own availability write" on public.doctor_availability;
+create policy "doctor own availability write" on public.doctor_availability for all to authenticated using (doctor_id=auth.uid() and public.current_app_role()='doctor') with check (doctor_id=auth.uid() and public.current_app_role()='doctor');
+drop policy "records doctor admin insert" on public.medical_records;
+create policy "records doctor admin insert" on public.medical_records for insert to authenticated with check (public.current_app_role()='admin' or (doctor_id=auth.uid() and public.current_app_role()='doctor' and exists(select 1 from public.appointments a where a.patient_id=medical_records.patient_id and a.doctor_id=auth.uid() and a.id=medical_records.appointment_id)));
+drop policy "prescriptions doctor insert" on public.prescriptions;
+create policy "prescriptions doctor insert" on public.prescriptions for insert to authenticated with check (doctor_id=auth.uid() and public.current_app_role()='doctor' and exists(select 1 from public.appointments a where a.patient_id=prescriptions.patient_id and a.doctor_id=auth.uid() and a.id=prescriptions.appointment_id));
+drop policy "conversations patient doctor insert" on public.conversations;
+create policy "conversations patient doctor insert" on public.conversations for insert to authenticated with check (exists(select 1 from public.appointments a where a.id=conversations.appointment_id and a.patient_id=conversations.patient_id and a.doctor_id=conversations.doctor_id and (a.patient_id=auth.uid() or a.doctor_id=auth.uid())));
+drop policy "reviews patient insert" on public.reviews;
+create policy "reviews patient insert" on public.reviews for insert to authenticated with check (patient_id=auth.uid() and status='published' and exists(select 1 from public.appointments a where a.id=reviews.appointment_id and a.patient_id=auth.uid() and a.doctor_id=reviews.doctor_id and a.status='completed'));
+-- An owner may mark a notification read, never rewrite its owner or content.
+drop policy "notifications own update" on public.notifications;
+create policy "notifications own update" on public.notifications for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+
+alter table public.appointments add constraint appointments_doctor_no_overlap exclude using gist (doctor_id with =, tstzrange(starts_at,ends_at,'[)') with &&) where (status in ('requested','confirmed','checked_in'));
+alter table public.appointments add constraint appointment_reason_length check(char_length(btrim(reason)) between 3 and 1000);
+
+create or replace function private.book_appointment(p_doctor_id uuid,p_starts_at timestamptz,p_consultation_mode text,p_reason text,p_patient_note text default null) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare
+  v_patient uuid:=auth.uid(); v_doctor public.doctor_profiles; v_id uuid;
+  v_local timestamp; v_minutes integer; v_end timestamptz;
+begin
+  if v_patient is null then raise exception 'Authentication required'; end if;
+  if private.current_app_role() is distinct from 'patient' then raise exception 'Active patient role required'; end if;
+  if p_starts_at is null or not isfinite(p_starts_at) or p_starts_at<=now() then raise exception 'Appointment must be in the future'; end if;
+  if p_reason is null or char_length(btrim(p_reason)) not between 3 and 1000 then raise exception 'Reason must contain 3 to 1000 characters'; end if;
+  if char_length(coalesce(p_patient_note,''))>2000 then raise exception 'Patient note is too long'; end if;
+  if p_consultation_mode is null or p_consultation_mode not in ('In-person','Video') then raise exception 'Unsupported consultation mode'; end if;
+  select d.* into v_doctor from public.doctor_profiles d join public.profiles p on p.id=d.user_id where d.user_id=p_doctor_id and d.verification_status='verified' and p.role='doctor' and p.status='active' for update of d;
+  if not found then raise exception 'Doctor is unavailable'; end if;
+  if not(p_consultation_mode=any(v_doctor.consultation_modes)) then raise exception 'Doctor does not support this consultation mode'; end if;
+  v_local:=p_starts_at at time zone 'Asia/Karachi';
+  select a.slot_minutes into v_minutes from public.doctor_availability a
+    where a.doctor_id=p_doctor_id and a.active and a.consultation_mode=p_consultation_mode
+    and a.day_of_week=extract(dow from v_local) and v_local::time>=a.start_time
+    and (v_local+make_interval(mins=>a.slot_minutes))::date=v_local::date
+    and (v_local+make_interval(mins=>a.slot_minutes))::time<=a.end_time
+    and mod(extract(epoch from(v_local::time-a.start_time))::numeric,(a.slot_minutes*60)::numeric)=0
+    order by a.slot_minutes limit 1;
+  if v_minutes is null then raise exception 'Selected time is outside doctor availability'; end if;
+  v_end:=p_starts_at+make_interval(mins=>v_minutes);
+  if exists(select 1 from public.appointments where doctor_id=p_doctor_id and status in ('requested','confirmed','checked_in') and tstzrange(starts_at,ends_at,'[)') && tstzrange(p_starts_at,v_end,'[)')) then raise exception 'Selected slot is no longer available'; end if;
+  insert into public.appointments(patient_id,doctor_id,starts_at,ends_at,consultation_mode,reason,fee_amount,patient_note,status,clinic_name)
+  values(v_patient,p_doctor_id,p_starts_at,v_end,p_consultation_mode,btrim(p_reason),v_doctor.consultation_fee,p_patient_note,'confirmed',v_doctor.clinic_name) returning id into v_id;
+  insert into public.notifications(user_id,kind,title,body,link) values(v_patient,'appointment','Appointment confirmed','Your appointment has been confirmed.','/patient/appointments');
+  return v_id;
+exception when exclusion_violation then raise exception 'Selected slot is no longer available';
+end; $$;
+create or replace function public.book_appointment(p_doctor_id uuid,p_starts_at timestamptz,p_consultation_mode text,p_reason text,p_patient_note text default null) returns uuid
+language sql security invoker set search_path='' as $$ select private.book_appointment(p_doctor_id,p_starts_at,p_consultation_mode,p_reason,p_patient_note); $$;
+
+create function private.cancel_appointment(p_appointment_id uuid) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare v_id uuid;
+begin
+ if auth.uid() is null or private.current_app_role() is distinct from 'patient' then raise exception 'Active patient authentication required'; end if;
+ update public.appointments set status='cancelled',updated_at=now() where id=p_appointment_id and patient_id=auth.uid() and starts_at>now() and status in ('requested','confirmed') returning id into v_id;
+ if v_id is null then raise exception 'Appointment cannot be cancelled'; end if;
+ return v_id;
+end; $$;
+create function public.cancel_appointment(p_appointment_id uuid) returns uuid language sql security invoker set search_path='' as $$ select private.cancel_appointment(p_appointment_id); $$;
+
+-- Only approved professional directory fields; no private patient/profile data.
+create function private.list_verified_doctors() returns jsonb
+language sql stable security definer set search_path='' as $$
+ select coalesce(jsonb_agg(jsonb_build_object('id',d.user_id,'name',p.full_name,'gender',p.gender,'image',p.avatar_url,'clinic',d.clinic_name,'location',d.city,'rating',d.average_rating,'reviews',d.review_count,'experience',d.years_experience,'fee',d.consultation_fee,'mode',d.consultation_modes,'languages',d.languages,'about',d.bio,'specialty',coalesce((select s.name from public.doctor_specialties ds join public.specialties s on s.id=ds.specialty_id where ds.doctor_id=d.user_id and s.active order by ds.is_primary desc,s.name limit 1),'General Medicine')) order by p.full_name),'[]'::jsonb)
+ from public.doctor_profiles d join public.profiles p on p.id=d.user_id where d.verification_status='verified' and p.role='doctor' and p.status='active';
+$$;
+create function public.list_verified_doctors() returns jsonb language sql stable security invoker set search_path='' as $$ select private.list_verified_doctors(); $$;
+
+-- Only occupied times are exposed, never appointment IDs/patient IDs/reasons.
+create function private.get_available_slots(p_doctor_id uuid,p_date date,p_consultation_mode text) returns table(starts_at timestamptz,ends_at timestamptz)
+language sql stable security definer set search_path='' as $$
+ select distinct s.slot, s.slot+make_interval(mins=>a.slot_minutes)
+ from public.doctor_availability a join public.doctor_profiles d on d.user_id=a.doctor_id join public.profiles p on p.id=d.user_id
+ cross join lateral generate_series((p_date+a.start_time) at time zone 'Asia/Karachi',((p_date+a.end_time) at time zone 'Asia/Karachi')-make_interval(mins=>a.slot_minutes),make_interval(mins=>a.slot_minutes)) s(slot)
+ where a.doctor_id=p_doctor_id and a.day_of_week=extract(dow from p_date) and a.active and a.consultation_mode=p_consultation_mode and d.verification_status='verified' and p.role='doctor' and p.status='active' and p_consultation_mode=any(d.consultation_modes)
+ and p_date between (now() at time zone 'Asia/Karachi')::date and (now() at time zone 'Asia/Karachi')::date+180 and s.slot>now()
+ and not exists(select 1 from public.appointments x where x.doctor_id=p_doctor_id and x.status in ('requested','confirmed','checked_in') and tstzrange(x.starts_at,x.ends_at,'[)') && tstzrange(s.slot,s.slot+make_interval(mins=>a.slot_minutes),'[)')) order by 1;
+$$;
+create function public.get_available_slots(p_doctor_id uuid,p_date date,p_consultation_mode text) returns table(starts_at timestamptz,ends_at timestamptz) language sql stable security invoker set search_path='' as $$ select * from private.get_available_slots(p_doctor_id,p_date,p_consultation_mode); $$;
+
+revoke execute on all functions in schema public from public,anon,authenticated;
+revoke execute on all functions in schema private from public,anon,authenticated;
+grant execute on function public.current_app_role(),private.current_app_role(),public.list_verified_doctors(),private.list_verified_doctors(),public.get_available_slots(uuid,date,text),private.get_available_slots(uuid,date,text) to anon,authenticated;
+grant execute on function public.book_appointment(uuid,timestamptz,text,text,text),private.book_appointment(uuid,timestamptz,text,text,text),public.cancel_appointment(uuid),private.cancel_appointment(uuid) to authenticated;

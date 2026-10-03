@@ -1,5 +1,11 @@
 import fs from 'node:fs'
 import { test, expect } from '@playwright/test'
+import { doctors } from '../src/data.js'
+
+// Read-only fixtures make presentation QA reproducible; live RPC QA is separate.
+test.beforeEach(async ({page}) => {
+  await page.route('**/rest/v1/rpc/list_verified_doctors', route => route.fulfill({json:doctors}))
+})
 
 const noOverflow = async page => {
   const dims = await page.evaluate(() => ({s:document.documentElement.scrollWidth,c:document.documentElement.clientWidth}))
@@ -28,17 +34,10 @@ test('doctor search and profile flow works', async ({page}) => {
   await noOverflow(page)
 })
 
-test('patient booking completes all four steps', async ({page}) => {
+test('booking cannot fake a confirmation without a patient session', async ({page}) => {
   await page.goto('/patient/book?doctor=d1')
-  await expect(page.getByRole('heading',{name:'Choose your doctor'})).toBeVisible()
-  await page.getByRole('button',{name:/Continue/}).click()
-  await expect(page.getByRole('heading',{name:/How would you like to meet/})).toBeVisible()
-  await page.getByRole('button',{name:/Continue/}).click()
-  await expect(page.getByRole('heading',{name:'Select a time'})).toBeVisible()
-  await page.getByRole('button',{name:/Continue/}).click()
-  await expect(page.getByRole('heading',{name:'Review appointment'})).toBeVisible()
-  await page.getByRole('button',{name:/Confirm appointment/}).click()
-  await expect(page.getByRole('heading',{name:'Appointment confirmed.'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Sign in to book an appointment'})).toBeVisible()
+  await expect(page.getByRole('button',{name:/Confirm appointment/})).toHaveCount(0)
 })
 
 test('patient doctor and admin dashboards render without overflow', async ({page}) => {
@@ -57,10 +56,7 @@ test('showcase walkthrough', async ({page}, testInfo) => {
   await page.goto('/doctors'); await page.waitForTimeout(3000)
   await page.getByLabel('Specialty filter').selectOption('Cardiology'); await page.waitForTimeout(2500)
   await page.getByRole('link',{name:'View profile'}).first().click(); await page.waitForTimeout(3000)
-  await page.getByRole('button',{name:'Book appointment'}).click(); await page.waitForTimeout(2500)
-  await page.getByRole('button',{name:/Continue/}).click(); await page.waitForTimeout(1800)
-  await page.getByRole('button',{name:/Continue/}).click(); await page.waitForTimeout(1800)
-  await page.getByRole('button',{name:'7:00 PM'}).click(); await page.getByRole('button',{name:/Continue/}).click(); await page.waitForTimeout(2200)
+  await page.getByRole('button',{name:'Book appointment'}).click(); await page.waitForTimeout(6500)
   await page.goto('/patient'); await page.waitForTimeout(3000)
   await page.goto('/doctor'); await page.waitForTimeout(3000)
   await page.goto('/admin'); await page.waitForTimeout(3000)

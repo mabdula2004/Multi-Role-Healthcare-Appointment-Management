@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:backend": "node tests/backend-qa.mjs",
+    "test:booking": "node tests/live-booking-qa.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
