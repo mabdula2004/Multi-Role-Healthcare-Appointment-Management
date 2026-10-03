@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle, TrendingUp, BadgeCheck, UserCog, BarChart3, LifeBuoy, History, Building2
 } from 'lucide-react'
 import { appointments, doctors, specialties, adminStats } from './data'
+import { supabase, isSupabaseConfigured } from './supabase'
 
 const cls = (...v) => v.filter(Boolean).join(' ')
 const money = v => new Intl.NumberFormat('en-PK', { style:'currency', currency:'PKR', maximumFractionDigits:0 }).format(v)
@@ -84,13 +85,54 @@ function About(){return <InfoPage eyebrow="About Medora" title="A calmer interfa
 function Contact(){return <InfoPage eyebrow="Support" title="How can we help?"><div className="contactGrid"><div><h2>Patient support</h2><p>Questions about booking, account access or documents? Send a message and our support team will follow up.</p><div className="contactCard"><LifeBuoy/><div><strong>Support hours</strong><span>Mon–Sat · 8:00 AM–8:00 PM</span></div></div></div><form className="formCard" onSubmit={e=>{e.preventDefault(); alert('Message sent — demo flow')}}><label>Name<input required placeholder="Your name"/></label><label>Email<input type="email" required placeholder="you@example.com"/></label><label>How can we help?<textarea required rows="5" placeholder="Tell us what you need…"/></label><Button type="submit">Send message</Button></form></div></InfoPage>}
 function FAQ(){return <InfoPage eyebrow="Help center" title="Frequently asked questions."><div className="faqList">{['How do I reschedule an appointment?','Can I choose between video and in-person care?','Where can I find prescriptions and lab results?','How does doctor verification work?','Can I message my care team?'].map((q,i)=><details key={q} open={i===0}><summary>{q}<ChevronDown/></summary><p>Open the relevant appointment or care section in your patient portal. Medora keeps the next action visible and confirms changes before anything is saved.</p></details>)}</div></InfoPage>}
 
-function AuthPage({register=false,forgot=false}){const nav=useNavigate(); const [role,setRole]=useState('patient'); return <div className="authPage"><div className="authAside"><Logo/><div><span className="eyebrow light">Care, connected</span><h1>{forgot?'Reset your access.':register?'One account for your care journey.':'Welcome back to Medora.'}</h1><p>Securely manage appointments, records, prescriptions and conversations from one thoughtful workspace.</p></div><small>Portfolio demo · Never use real medical information.</small></div><div className="authMain"><div className="authBox"><Link className="backHome" to="/"><ChevronLeft/> Back home</Link><h2>{forgot?'Forgot password':register?'Create your account':'Sign in'}</h2><p>{forgot?'We’ll send reset instructions to your email.':register?'Choose a role to explore the complete product demo.':'Use the demo role selector to explore each portal.'}</p>{!forgot&&<div className="roleTabs">{['patient','doctor','admin'].map(r=><button className={role===r?'active':''} onClick={()=>setRole(r)} key={r}>{r[0].toUpperCase()+r.slice(1)}</button>)}</div>}<form onSubmit={e=>{e.preventDefault(); if(forgot)return alert('Reset link sent — demo'); localStorage.setItem('medoraRole',role); nav(`/${role}`)}}>{register&&<label>Full name<input required placeholder="Amina Khan"/></label>}<label>Email address<input type="email" required placeholder="amina@example.com"/></label>{!forgot&&<label>Password<input type="password" required placeholder="••••••••"/></label>}<Button type="submit">{forgot?'Send reset link':register?'Create account':'Continue to portal'}</Button></form>{!forgot&&<p className="authSwitch">{register?'Already have an account?':'New to Medora?'} <Link to={register?'/login':'/register'}>{register?'Sign in':'Create account'}</Link></p>}{!register&&!forgot&&<Link className="forgotLink" to="/forgot-password">Forgot password?</Link>}</div></div></div>}
+function AuthPage({register=false,forgot=false}){
+  const nav=useNavigate()
+  const [role,setRole]=useState('patient')
+  const [fullName,setFullName]=useState('')
+  const [email,setEmail]=useState('')
+  const [password,setPassword]=useState('')
+  const [busy,setBusy]=useState(false)
+  const [message,setMessage]=useState('')
+  const submit=async(e)=>{
+    e.preventDefault()
+    setMessage('')
+    if(!isSupabaseConfigured){localStorage.setItem('medoraRole',role); nav('/'+role); return}
+    setBusy(true)
+    try{
+      if(forgot){
+        const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/login'})
+        if(error) throw error
+        setMessage('Password reset instructions have been sent to your email.')
+        return
+      }
+      if(register){
+        if(role==='admin'){setMessage('Admin accounts are invite-only. Use the Admin demo to review the workspace.'); return}
+        const {data,error}=await supabase.auth.signUp({email,password,options:{data:{full_name:fullName,role}}})
+        if(error) throw error
+        if(data.session){localStorage.setItem('medoraRole',role); nav('/'+role)}
+        else setMessage('Account created. Check your email to confirm access, then sign in.')
+        return
+      }
+      const {data,error}=await supabase.auth.signInWithPassword({email,password})
+      if(error) throw error
+      const liveRole=data.user?.user_metadata?.role||'patient'
+      localStorage.setItem('medoraRole',liveRole)
+      nav('/'+liveRole)
+    }catch(error){
+      setMessage(error.message||'Unable to complete this request.')
+    }finally{
+      setBusy(false)
+    }
+  }
+  const openDemo=()=>{localStorage.setItem('medoraRole',role); nav('/'+role)}
+  return <div className="authPage"><div className="authAside"><Logo/><div><span className="eyebrow light">Care, connected</span><h1>{forgot?'Reset your access.':register?'One account for your care journey.':'Welcome back to Medora.'}</h1><p>Securely manage appointments, records, prescriptions and conversations from one thoughtful workspace.</p></div><small>Portfolio demo · Never use real medical information.</small></div><div className="authMain"><div className="authBox"><Link className="backHome" to="/"><ChevronLeft/> Back home</Link><h2>{forgot?'Forgot password':register?'Create your account':'Sign in'}</h2><p>{forgot?'We’ll send reset instructions to your email.':register?'Patients and clinicians can create secure accounts. Admin access is invitation-only.':'Sign in with Supabase Auth, or open a role demo to review the product.'}</p>{!forgot&&<div className="roleTabs">{['patient','doctor','admin'].map(r=><button type="button" className={role===r?'active':''} onClick={()=>setRole(r)} key={r}>{r[0].toUpperCase()+r.slice(1)}</button>)}</div>}<form onSubmit={submit}>{register&&<label>Full name<input required value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="Amina Khan"/></label>}<label>Email address<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="amina@example.com"/></label>{!forgot&&<label>Password<input type="password" required minLength="6" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••"/></label>}{message&&<div className="notice"><AlertCircle/><p>{message}</p></div>}<Button type="submit" disabled={busy}>{busy?'Please wait…':forgot?'Send reset link':register?'Create secure account':'Sign in securely'}</Button></form>{!forgot&&<><Button type="button" variant="secondary" className="authDemoButton" onClick={openDemo}>Open {role} demo</Button><p className="authSwitch">{register?'Already have an account?':'New to Medora?'} <Link to={register?'/login':'/register'}>{register?'Sign in':'Create account'}</Link></p></>}{!register&&!forgot&&<Link className="forgotLink" to="/forgot-password">Forgot password?</Link>}</div></div></div>
+}
 
 const patientNav=[['/patient',LayoutDashboard,'Overview'],['/patient/book',CalendarCheck,'Book appointment'],['/patient/appointments',Calendar,'Appointments'],['/patient/doctors',Stethoscope,'My doctors'],['/patient/messages',MessageCircle,'Messages'],['/patient/records',FileHeart,'Medical records'],['/patient/prescriptions',Pill,'Prescriptions'],['/patient/labs',TestTube2,'Lab results'],['/patient/billing',WalletCards,'Bills & payments'],['/patient/insurance',ShieldCheck,'Insurance'],['/patient/notifications',Bell,'Notifications'],['/patient/profile',UserRound,'Profile'],['/patient/settings',Settings,'Settings'],['/patient/security',LockKeyhole,'Security']]
 const doctorNav=[['/doctor',LayoutDashboard,'Overview'],['/doctor/appointments',Calendar,'Today’s appointments'],['/doctor/requests',Inbox,'Appointment requests'],['/doctor/patients',Users,'Patients'],['/doctor/schedule',Clock3,'Schedule'],['/doctor/notes',ClipboardList,'Consultation notes'],['/doctor/prescriptions',Pill,'Prescriptions'],['/doctor/records',FileHeart,'Records'],['/doctor/messages',MessageCircle,'Messages'],['/doctor/earnings',CircleDollarSign,'Earnings'],['/doctor/profile',UserRound,'Profile'],['/doctor/settings',Settings,'Settings']]
 const adminNav=[['/admin',LayoutDashboard,'Overview'],['/admin/doctors',Stethoscope,'Doctors'],['/admin/patients',Users,'Patients'],['/admin/appointments',Calendar,'Appointments'],['/admin/specialties',Activity,'Specialties'],['/admin/reviews',Star,'Reviews'],['/admin/payments',CreditCard,'Payments'],['/admin/analytics',BarChart3,'Analytics'],['/admin/support',LifeBuoy,'Support'],['/admin/users',UserCog,'User status'],['/admin/audit',History,'Audit activity']]
 
-function RoleShell({role,nav,children}){const [mobile,setMobile]=useState(false); const location=useLocation(); const title=nav.find(n=>n[0]===location.pathname)?.[2]||'Workspace'; return <div className="portal"><aside className={cls('sidebar',mobile&&'open')}><div className="sideTop"><Logo/><button aria-label="Close navigation" className="iconBtn closeSide" onClick={()=>setMobile(false)}><X/></button></div><div className="roleBadge"><span>{role==='patient'?'AK':role==='doctor'?'SM':'AD'}</span><div><strong>{role==='patient'?'Amina Khan':role==='doctor'?'Dr. Sarah Malik':'Medora Admin'}</strong><small>{role[0].toUpperCase()+role.slice(1)} workspace</small></div></div><nav>{nav.map(([to,Icon,label])=><NavLink end={to===`/${role}`} to={to} key={to} onClick={()=>setMobile(false)}><Icon size={18}/>{label}</NavLink>)}</nav><div className="sideBottom"><Link to="/"><LogOut size={18}/> Exit demo</Link></div></aside><div className="portalMain"><header className="portalHeader"><button aria-label="Open navigation" className="iconBtn openSide" onClick={()=>setMobile(true)}><Menu/></button><div><small>{role[0].toUpperCase()+role.slice(1)} portal</small><h1>{title}</h1></div><div className="portalActions"><button className="searchMini"><Search size={17}/> Search</button><button className="iconBtn"><Bell size={19}/><span className="notificationDot"/></button><div className="profileMini">{role==='patient'?'AK':role==='doctor'?'SM':'AD'}</div></div></header><main className="portalContent">{children}</main></div></div>}
+function RoleShell({role,nav,children}){const [mobile,setMobile]=useState(false); const location=useLocation(); const title=nav.find(n=>n[0]===location.pathname)?.[2]||'Workspace'; return <div className="portal"><aside className={cls('sidebar',mobile&&'open')}><div className="sideTop"><Logo/><button aria-label="Close navigation" className="iconBtn closeSide" onClick={()=>setMobile(false)}><X/></button></div><div className="roleBadge"><span>{role==='patient'?'AK':role==='doctor'?'SM':'AD'}</span><div><strong>{role==='patient'?'Amina Khan':role==='doctor'?'Dr. Sarah Malik':'Medora Admin'}</strong><small>{role[0].toUpperCase()+role.slice(1)} workspace</small></div></div><nav>{nav.map(([to,Icon,label])=><NavLink end={to===`/${role}`} to={to} key={to} onClick={()=>setMobile(false)}><Icon size={18}/>{label}</NavLink>)}</nav><div className="sideBottom"><Link to="/" onClick={()=>{localStorage.removeItem('medoraRole'); supabase?.auth.signOut()}}><LogOut size={18}/> Exit workspace</Link></div></aside><div className="portalMain"><header className="portalHeader"><button aria-label="Open navigation" className="iconBtn openSide" onClick={()=>setMobile(true)}><Menu/></button><div><small>{role[0].toUpperCase()+role.slice(1)} portal</small><h1>{title}</h1></div><div className="portalActions"><button className="searchMini"><Search size={17}/> Search</button><button className="iconBtn"><Bell size={19}/><span className="notificationDot"/></button><div className="profileMini">{role==='patient'?'AK':role==='doctor'?'SM':'AD'}</div></div></header><main className="portalContent">{children}</main></div></div>}
 
 function Metric({icon:Icon,label,value,meta}){return <div className="metricCard"><div className="metricIcon"><Icon/></div><div><span>{label}</span><strong>{value}</strong><small>{meta}</small></div></div>}
 function SectionTitle({title,action}){return <div className="panelTitle"><h2>{title}</h2>{action&&<button>{action}<ArrowRight/></button>}</div>}
