@@ -32,3 +32,10 @@ export async function bookAppointment({ doctorId, startsAt, mode, reason, note }
 }
 export const listAppointments = () => result(supabase.from('appointments').select('*').order('starts_at', { ascending: false }))
 export const cancelAppointment = id => result(supabase.rpc('cancel_appointment', { p_appointment_id: id }))
+
+export const rescheduleAppointment = (id, startsAt, mode) => result(supabase.rpc('reschedule_appointment', {
+  p_appointment_id: id, p_starts_at: startsAt, p_consultation_mode: mode
+}))
+export const submitReview = (appointmentId, rating, body = null) => result(supabase.rpc('submit_review', {
+  p_appointment_id: appointmentId, p_rating: Number(rating), p_body: body?.trim() || null
+}))
