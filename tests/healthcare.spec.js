@@ -78,6 +78,29 @@ test('doctor directory advanced filters are interactive', async ({page}) => {
   await noOverflow(page)
 })
 
+
+
+test('doctor synthetic preview can process appointment requests', async ({page}) => {
+  await page.addInitScript(()=>localStorage.setItem('medoraRole','doctor'))
+  await page.goto('/doctor/requests')
+  await page.getByRole('button',{name:'Accept'}).first().click()
+  await expect(page.getByText(/request accepted in demo mode/i)).toBeVisible()
+  await expect(page.getByText('accepted',{exact:true}).first()).toBeVisible()
+  await noOverflow(page)
+})
+
+test('admin synthetic preview supports add search and status management', async ({page}) => {
+  await page.addInitScript(()=>localStorage.setItem('medoraRole','admin'))
+  await page.goto('/admin/users')
+  await page.getByRole('button',{name:'Add new'}).click()
+  await expect(page.getByText(/Synthetic item added/i)).toBeVisible()
+  await page.getByLabel('Search User status').fill('Demo User')
+  await expect(page.getByText(/Demo User/i).first()).toBeVisible()
+  await page.getByRole('button',{name:'Manage'}).first().click()
+  await expect(page.getByText(/Demo status updated/i)).toBeVisible()
+  await noOverflow(page)
+})
+
 test('patient doctor and admin dashboards render without overflow', async ({page}) => {
   for (const route of ['/patient','/doctor','/admin']) {
     await page.goto(route)
