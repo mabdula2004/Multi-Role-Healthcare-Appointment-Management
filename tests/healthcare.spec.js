@@ -12,9 +12,8 @@ test('public discovery is responsive and navigable', async ({page}, testInfo) =>
   await expect(page.getByRole('heading',{name:/Healthcare that feels human/i})).toBeVisible()
   await noOverflow(page)
   await page.screenshot({path:`artifacts/${testInfo.project.name}-home.png`,fullPage:true})
-  if(testInfo.project.name==='mobile-chromium') {
-    await page.getByRole('button',{name:'Toggle menu'}).click()
-  }
+  const menu = page.getByRole('button',{name:'Toggle menu'})
+  if (await menu.isVisible()) await menu.click()
   await page.getByRole('link',{name:'Find doctors'}).first().click()
   await expect(page.getByRole('heading',{name:/Find care that fits your life/i})).toBeVisible()
   await noOverflow(page)
