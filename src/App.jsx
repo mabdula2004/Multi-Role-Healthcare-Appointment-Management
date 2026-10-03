@@ -14,6 +14,7 @@ import { getProfile } from './careApi'
 import BookingFlow from './BookingFlow'
 import LiveAppointments from './LiveAppointments'
 import { PatientBackendDashboard, PatientBackendWorkspace, DoctorBackendDashboard, DoctorBackendWorkspace, AdminBackendDashboard, AdminBackendWorkspace } from './PortalBackends'
+import { createSupportRequest } from './portalApi'
 
 const cls = (...v) => v.filter(Boolean).join(' ')
 const money = v => new Intl.NumberFormat('en-PK', { style:'currency', currency:'PKR', maximumFractionDigits:0 }).format(v)
@@ -89,7 +90,11 @@ function InfoPage({title,eyebrow,children}){return <><PublicHeader/><main><div c
 function Specialties(){return <InfoPage eyebrow="Clinical directory" title="Care for every stage of life."><div className="specialtyGrid large">{specialties.map(([n,d,i])=><Link className="specialtyCard" to={`/doctors?specialty=${n}`} key={n}><span>{i}</span><div><strong>{n}</strong><small>{d}</small></div><ArrowRight/></Link>)}</div></InfoPage>}
 function HowItWorks(){return <InfoPage eyebrow="Simple by design" title="Book care in four clear steps."><div className="stepsGrid">{[['01','Search','Find doctors by specialty, city, care mode and availability.'],['02','Compare','Review expertise, fees, ratings and appointment options.'],['03','Book','Choose a real slot, consultation type and reason for visit.'],['04','Manage','Keep reminders, records, prescriptions and follow-ups organized.']].map(x=><article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div></InfoPage>}
 function About(){return <InfoPage eyebrow="About Medora" title="A calmer interface for complicated care."><div className="storyGrid"><div><h2>Designed around patient confidence.</h2><p>Medora is a portfolio healthcare product concept that brings discovery, scheduling and post-visit information into one coherent experience.</p><p>The visual system is intentionally restrained: strong hierarchy, generous whitespace, accessible contrast and calm interaction patterns instead of dashboard clutter.</p></div><img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1100&q=85" alt="Healthcare team"/></div></InfoPage>}
-function Contact(){return <InfoPage eyebrow="Support" title="How can we help?"><div className="contactGrid"><div><h2>Patient support</h2><p>Questions about booking, account access or documents? Send a message and our support team will follow up.</p><div className="contactCard"><LifeBuoy/><div><strong>Support hours</strong><span>Mon–Sat · 8:00 AM–8:00 PM</span></div></div></div><form className="formCard" onSubmit={e=>{e.preventDefault(); alert('Message sent — demo flow')}}><label>Name<input required placeholder="Your name"/></label><label>Email<input type="email" required placeholder="you@example.com"/></label><label>How can we help?<textarea required rows="5" placeholder="Tell us what you need…"/></label><Button type="submit">Send message</Button></form></div></InfoPage>}
+function Contact(){
+  const [form,setForm]=useState({name:'',email:'',message:''}),[busy,setBusy]=useState(false),[status,setStatus]=useState('')
+  const submit=async e=>{e.preventDefault();setBusy(true);setStatus('');try{await createSupportRequest(null,'Public support request',`Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`,'normal');setForm({name:'',email:'',message:''});setStatus('Your support request has been saved.')}catch(err){setStatus(err.message||'Unable to send your request.')}finally{setBusy(false)}}
+  return <InfoPage eyebrow="Support" title="How can we help?"><div className="contactGrid"><div><h2>Patient support</h2><p>Questions about booking, account access or documents? Send a message and our support team will follow up.</p><div className="contactCard"><LifeBuoy/><div><strong>Support hours</strong><span>Mon–Sat · 8:00 AM–8:00 PM</span></div></div></div><form className="formCard" onSubmit={submit}><label>Name<input required value={form.name} onChange={e=>setForm(v=>({...v,name:e.target.value}))} placeholder="Your name"/></label><label>Email<input type="email" required value={form.email} onChange={e=>setForm(v=>({...v,email:e.target.value}))} placeholder="you@example.com"/></label><label>How can we help?<textarea required rows="5" maxLength={4000} value={form.message} onChange={e=>setForm(v=>({...v,message:e.target.value}))} placeholder="Tell us what you need…"/></label>{status&&<div className="notice"><p>{status}</p></div>}<Button type="submit" disabled={busy}>{busy?'Sending…':'Send message'}</Button></form></div></InfoPage>
+}
 function FAQ(){return <InfoPage eyebrow="Help center" title="Frequently asked questions."><div className="faqList">{['How do I reschedule an appointment?','Can I choose between video and in-person care?','Where can I find prescriptions and lab results?','How does doctor verification work?','Can I message my care team?'].map((q,i)=><details key={q} open={i===0}><summary>{q}<ChevronDown/></summary><p>Open the relevant appointment or care section in your patient portal. Medora keeps the next action visible and confirms changes before anything is saved.</p></details>)}</div></InfoPage>}
 
 function AuthPage({register=false,forgot=false}){
@@ -209,10 +214,12 @@ function AdminAnalytics(){return <div className="analyticsGrid"><Metric icon={Us
 
 
 function LiveRoleState({role,nav,children,demo}){
-  const {session,profile,authLoading}=useCare()
+  const {session,profile,authLoading,authError}=useCare()
   if(authLoading)return <div className="portalLoading"><p>Loading secure workspace…</p></div>
+  if(session&&authError)return <div className="portalLoading"><div className="notice" role="alert"><p>{authError}</p></div></div>
   if(session&&profile?.role&&profile.role!==role)return <Navigate to={'/'+profile.role} replace/>
-  if(session&&profile?.role===role&&profile.status==='active')return <RoleShell role={role} nav={nav}>{children}</RoleShell>
+  if(session&&profile?.status!=='active')return <div className="portalLoading"><div className="notice" role="alert"><p>This account is not active. Contact support for access.</p></div></div>
+  if(session&&profile?.role===role)return <RoleShell role={role} nav={nav}>{children}</RoleShell>
   return demo
 }
 function PatientHomeRoute(){return <LiveRoleState role="patient" nav={patientNav} demo={<PatientDashboard/>}><PatientBackendDashboard/></LiveRoleState>}
