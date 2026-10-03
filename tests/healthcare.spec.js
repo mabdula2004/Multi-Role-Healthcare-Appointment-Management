@@ -40,6 +40,44 @@ test('booking cannot fake a confirmation without a patient session', async ({pag
   await expect(page.getByRole('button',{name:/Confirm appointment/})).toHaveCount(0)
 })
 
+
+
+test('synthetic patient preview completes and persists a browser-only booking', async ({page}) => {
+  await page.goto('/login')
+  await page.getByRole('button',{name:'Open patient demo'}).click()
+  await expect(page.getByText(/Synthetic demo data/i)).toBeVisible()
+  await page.getByRole('link',{name:/Book appointment/i}).first().click()
+
+  await expect(page.getByText(/Preview booking/i)).toBeVisible()
+  await page.getByRole('button',{name:/Dr\. Sarah Malik/i}).click()
+  await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByLabel('Reason for visit').fill('Routine cardiology follow-up')
+  await page.getByRole('button',{name:'Continue'}).click()
+  await page.locator('.slotGrid button').first().click()
+  await page.getByRole('button',{name:'Continue'}).click()
+  await page.getByRole('button',{name:'Confirm appointment'}).click()
+
+  await expect(page.getByRole('heading',{name:'Demo appointment confirmed.'})).toBeVisible()
+  const id=await page.getByTestId('appointment-id').textContent()
+  expect(id).toMatch(/^DEMO-/)
+  await page.getByRole('link',{name:'View appointments'}).click()
+  await expect(page.getByText(id)).toBeVisible()
+  await page.reload()
+  await expect(page.getByText(id)).toBeVisible()
+  await noOverflow(page)
+})
+
+test('doctor directory advanced filters are interactive', async ({page}) => {
+  await page.goto('/doctors')
+  await page.getByLabel('Search doctors directory').fill('Sarah')
+  await page.getByLabel('Gender filter').selectOption('Female')
+  await page.getByLabel('Consultation mode').selectOption('Video')
+  await expect(page.getByRole('heading',{name:'Dr. Sarah Malik',exact:true})).toBeVisible()
+  await page.getByRole('checkbox',{name:'4.8+ rating'}).check()
+  await expect(page.getByRole('heading',{name:'Dr. Sarah Malik',exact:true})).toBeVisible()
+  await noOverflow(page)
+})
+
 test('patient doctor and admin dashboards render without overflow', async ({page}) => {
   for (const route of ['/patient','/doctor','/admin']) {
     await page.goto(route)
