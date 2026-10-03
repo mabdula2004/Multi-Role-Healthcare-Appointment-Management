@@ -17,11 +17,9 @@ jobs:
         run: |
           cat .bootstrap/part00 .bootstrap/part01 .bootstrap/part02 | base64 -d > /tmp/healthcare-src.tgz
           tar -xzf /tmp/healthcare-src.tgz -C /tmp
-          rsync -a /tmp/healthcare-react/ ./
+          rsync -a --exclude '.github/workflows/**' /tmp/healthcare-react/ ./
       - name: Remove bootstrap staging files
-        run: |
-          rm -rf .bootstrap
-          rm -f .github/workflows/bootstrap-healthcare.yml
+        run: rm -rf .bootstrap
       - name: Commit complete healthcare application
         run: |
           git config user.name 'github-actions[bot]'
