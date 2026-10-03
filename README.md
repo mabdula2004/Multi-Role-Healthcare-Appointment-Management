@@ -19,6 +19,216 @@ Operations dashboard, doctor verification/management, patient management, appoin
 ## Stack
 React 18 · Vite · React Router · Supabase · PostgreSQL · Row Level Security · Playwright · Lucide React · responsive CSS design system
 
+## How the application runs
+
+Medora is **one React + Vite application**, not three separate projects. A single frontend talks to a single Supabase backend, and the authenticated user's role determines which workspace is shown.
+
+```text
+Public website
+     |
+     v
+Authentication
+     |
+     +----------------+----------------+----------------+
+     |                |                |
+     v                v                v
+ Patient Portal    Doctor Portal     Admin Portal
+     \                |                /
+      \_______________|_______________/
+                      |
+                      v
+                  Supabase
+          Auth + PostgreSQL + RLS
+```
+
+You run the project once:
+
+```bash
+npm install
+npm run dev
+```
+
+Typical routes:
+
+| Area | Example route | Purpose |
+| --- | --- | --- |
+| Public website | `/` | Marketing, discovery and healthcare information |
+| Doctor directory | `/doctors` | Search and compare clinicians |
+| Authentication | `/login` | Sign in or open a safe demo workspace |
+| Patient portal | `/patient` | Patient care and appointment workspace |
+| Doctor portal | `/doctor` | Clinical workflow workspace |
+| Admin portal | `/admin` | Platform operations workspace |
+
+The three role portals are different views of the **same application**. They do not need three terminals, three React servers or three separate databases.
+
+## Roles and responsibilities
+
+### Patient
+
+The patient experience covers the complete journey from finding a clinician to managing follow-up care.
+
+Patients can:
+
+- Search doctors by name, specialty or city.
+- Filter by specialty, gender, consultation mode, fee, rating and availability.
+- Open doctor profiles and review experience, clinic, languages, consultation modes and fee.
+- Book an appointment through a guided four-step flow.
+- Choose in-person or video consultation.
+- Select an available date and time slot.
+- Add a reason for the visit and an optional note.
+- View upcoming and historical appointments.
+- Reschedule or cancel eligible appointments.
+- Leave a review after a completed visit.
+- View the care team / saved doctors.
+- Use secure patient-doctor messaging.
+- View medical records and uploaded documents.
+- View prescriptions and medication instructions.
+- View lab results.
+- View invoices and billing status.
+- Manage insurance information.
+- View notifications and reminders.
+- Update profile and emergency-contact information.
+- Manage notification/accessibility preferences.
+- Use account-security and session controls.
+
+The live booking backend verifies the current clinician fee and slot availability on the server. It also prevents overlapping or duplicate bookings.
+
+### Doctor
+
+The doctor portal is the clinical workspace.
+
+Doctors can:
+
+- View dashboard metrics and upcoming consultations.
+- Review today's and future appointments.
+- Accept or decline appointment requests.
+- Access relevant patient information.
+- Manage weekly availability and consultation modes.
+- Add or update appointment/consultation status.
+- Write consultation notes and clinical records.
+- Create and manage prescriptions.
+- Review and add lab-result information.
+- Use secure patient messaging.
+- Review invoice-derived consultation earnings.
+- Maintain a public doctor profile.
+- Manage specialties and consultation settings.
+- Update workspace preferences.
+
+Clinical access is restricted by backend authorization and Row Level Security rather than relying only on hidden frontend pages.
+
+### Admin
+
+The admin portal is the platform-control workspace.
+
+Admins can:
+
+- View operational dashboard metrics.
+- Manage patient and clinician accounts.
+- Review and verify doctor profiles.
+- Change allowed user/account status.
+- Manage platform-wide appointments.
+- Create and edit specialties.
+- Moderate patient reviews.
+- Manage invoice/payment status records.
+- Review operational analytics.
+- Handle support requests.
+- Review audit activity.
+- Invite clinicians/admin users through trusted backend operations.
+
+Admin capabilities are protected by server-side checks and are not available through public registration.
+
+## End-to-end workflow
+
+A normal care journey looks like this:
+
+```text
+Patient searches for a doctor
+        |
+        v
+Patient opens clinician profile
+        |
+        v
+Patient chooses consultation type + live slot
+        |
+        v
+Server validates availability + fee
+        |
+        v
+Appointment is created
+        |
+        v
+Doctor sees the appointment
+        |
+        v
+Doctor completes consultation
+        |
+        +--> consultation note
+        +--> medical record
+        +--> prescription
+        +--> lab result / follow-up
+        |
+        v
+Patient sees updated care information
+        |
+        v
+Admin oversees platform operations and support
+```
+
+## Synthetic / dummy preview mode
+
+The portfolio includes a clearly labeled **synthetic demo mode** so the product can be explored without putting real patient information into the database.
+
+Demo mode lets a reviewer safely test representative interactions such as:
+
+- Patient booking, rescheduling, cancellation and review states.
+- Patient messages, records, prescriptions, labs, insurance, profile and settings.
+- Doctor appointment requests, availability, consultation notes and prescription workflows.
+- Admin add/search/manage/export interactions.
+- Responsive Patient, Doctor and Admin dashboards.
+
+Synthetic preview data is explicitly marked as demo data. Browser-only demo booking data does not create a real health record.
+
+Authenticated routes, by contrast, are wired to the Supabase backend for the supported live workflows.
+
+## Backend and security model
+
+Medora uses one Supabase project for all three roles:
+
+- **Supabase Auth** for authentication and session handling.
+- **PostgreSQL** for application data.
+- **Row Level Security (RLS)** to enforce role-aware data access.
+- **RPC functions** for sensitive workflows such as appointment booking.
+- **Private Storage** for medical documents.
+- **Audit events** for sensitive administrative activity.
+
+Simplified access model:
+
+```text
+Patient
+  -> own patient data and permitted care records
+
+Doctor
+  -> relevant clinical/patient data for authorized workflows
+
+Admin
+  -> controlled administrative operations
+
+Public user
+  -> public clinician/specialty information only
+```
+
+The frontend does not grant access merely by hiding buttons. The database policies and privileged backend functions enforce the important boundaries.
+
+## What is intentionally not claimed
+
+This portfolio project demonstrates healthcare workflow architecture, but it does **not** claim production medical compliance certification.
+
+Also:
+
+- No real card-payment gateway is connected. Billing/invoice status is modeled and managed in the application.
+- No third-party live video-call provider is integrated. Video appointments store the consultation type / meeting workflow only.
+- Synthetic demo data must be used for portfolio testing; real protected health information should not be entered.
+
 ## Backend architecture
 `supabase/migrations/001_healthcare_schema.sql` models the three-role system with profiles, doctor profiles, specialties, availability, appointments, medical records, prescriptions, lab results, conversations/messages, insurance, invoices, reviews, notifications, support requests and audit events.
 
