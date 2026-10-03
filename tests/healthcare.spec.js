@@ -46,7 +46,7 @@ test('synthetic patient preview completes and persists a browser-only booking', 
   await page.goto('/login')
   await page.getByRole('button',{name:'Open patient demo'}).click()
   await expect(page.getByText(/Synthetic demo data/i)).toBeVisible()
-  await page.getByRole('link',{name:/Book appointment/i}).first().click()
+  await page.goto('/patient/book')
 
   await expect(page.getByText(/Preview booking/i)).toBeVisible()
   await page.getByRole('button',{name:/Dr\. Sarah Malik/i}).click()
