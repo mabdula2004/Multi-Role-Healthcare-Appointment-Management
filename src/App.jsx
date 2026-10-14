@@ -14,6 +14,7 @@ import { getProfile } from './careApi'
 import BookingFlow from './BookingFlow'
 import LiveAppointments from './LiveAppointments'
 import { PatientBackendDashboard, PatientBackendWorkspace, DoctorBackendDashboard, DoctorBackendWorkspace, AdminBackendDashboard, AdminBackendWorkspace } from './PortalBackends'
+import { EnhancedPatientWorkspace, EnhancedDoctorWorkspace, EnhancedAdminWorkspace } from './EnhancedDemoWorkspaces'
 import { createSupportRequest } from './portalApi'
 
 const doctors = demoDoctors
@@ -221,7 +222,7 @@ const patientCollections={
   '/patient/settings':['Settings','Communication, accessibility and portal preferences.','settings'],
   '/patient/security':['Security','Password, sessions and account protection.','security']
 }
-function PatientCollection(){const cfg=patientCollections[useLocation().pathname]||patientCollections['/patient/records']; return <RoleShell role="patient" nav={patientNav}><GenericWorkspace title={cfg[0]} subtitle={cfg[1]} type={cfg[2]}/></RoleShell>}
+function PatientCollection(){const cfg=patientCollections[useLocation().pathname]||patientCollections['/patient/records']; return <RoleShell role="patient" nav={patientNav}><EnhancedPatientWorkspace title={cfg[0]} subtitle={cfg[1]} type={cfg[2]}/></RoleShell>}
 
 function GenericWorkspace({title,subtitle,type}){
  const [notice,setNotice]=useState('')
@@ -264,7 +265,7 @@ function DoctorDashboard(){return <RoleShell role="doctor" nav={doctorNav}><div 
 const doctorCollections={
  '/doctor/appointments':['Today’s appointments','Your clinical schedule and consultation status.','schedule'], '/doctor/requests':['Appointment requests','Review new requests before they enter your schedule.','requests'], '/doctor/patients':['Patients','Search patient profiles and recent clinical activity.','patients'], '/doctor/schedule':['Schedule','Manage working hours, leave and appointment availability.','availability'], '/doctor/notes':['Consultation notes','Complete and sign clinical notes.','notes'], '/doctor/prescriptions':['Prescriptions','Draft, review and sign medications.','rx'], '/doctor/records':['Records','Clinical documents and patient history.','records'], '/doctor/messages':['Messages','Secure patient and care-team conversations.','messages'], '/doctor/earnings':['Earnings','Consultation revenue and settlement overview.','earnings'], '/doctor/profile':['Doctor profile','Public profile, credentials and consultation details.','doctorprofile'], '/doctor/settings':['Settings','Clinical and workspace preferences.','doctorsettings']
 }
-function DoctorCollection(){const c=doctorCollections[useLocation().pathname]; return <RoleShell role="doctor" nav={doctorNav}><DoctorWorkspace title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
+function DoctorCollection(){const c=doctorCollections[useLocation().pathname]; return <RoleShell role="doctor" nav={doctorNav}><EnhancedDoctorWorkspace title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
 function DoctorWorkspace({title,subtitle,type}){
  const [requests,setRequests]=useState([
   ['Nadia Aslam','Chest discomfort','Tomorrow · 9:00 AM','pending'],
@@ -313,7 +314,7 @@ function AdminDashboard(){return <RoleShell role="admin" nav={adminNav}><div cla
 const adminCollections={
  '/admin/doctors':['Doctors','Verification, status and clinician profile management.','doctors'], '/admin/patients':['Patients','Patient account and support overview.','patients'], '/admin/appointments':['Appointments','Platform-wide appointment operations.','appointments'], '/admin/specialties':['Specialties','Clinical specialty directory management.','specialties'], '/admin/reviews':['Reviews','Moderate patient feedback and reported reviews.','reviews'], '/admin/payments':['Payments','Invoices, refunds and settlements.','payments'], '/admin/analytics':['Analytics','Operational growth and care activity.','analytics'], '/admin/support':['Support','Patient and clinician support requests.','support'], '/admin/users':['User status','Account states, verification and access controls.','users'], '/admin/audit':['Audit activity','High-sensitivity administrative activity log.','audit']
 }
-function AdminCollection(){const c=adminCollections[useLocation().pathname]; return <RoleShell role="admin" nav={adminNav}><AdminWorkspace title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
+function AdminCollection(){const c=adminCollections[useLocation().pathname]; return <RoleShell role="admin" nav={adminNav}><EnhancedAdminWorkspace title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
 function AdminWorkspace({title,subtitle,type}){
  const baseRows=type==='doctors'?doctors.map(d=>[d.name,d.specialty,d.location,'Verified']):type==='specialties'?specialties.map((s,i)=>[s[0],s[1],(18+i*7)+' doctors','Active']):[['Amina Khan','Patient','Lahore','Active'],['Hassan Ali','Patient','Lahore','Active'],['Dr. Sarah Malik','Doctor','Lahore','Verified'],['Dr. Hira Sheikh','Doctor','Karachi','Review']]
  const [rows,setRows]=useState(baseRows)
