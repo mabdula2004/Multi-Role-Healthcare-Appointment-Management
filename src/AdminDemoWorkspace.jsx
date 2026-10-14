@@ -1,11 +1,14 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, {useEffect, useId, useRef, useState} from 'react'
 import {Link} from 'react-router-dom'
 import {Activity,Calendar,CheckCircle2,Download,History,LifeBuoy,Plus,Search,ShieldCheck,Star,Stethoscope,Users,X} from 'lucide-react'
 import {ADMIN_DEMO_KEY,addAdminRecord,adminCsv,adminStatuses,demoDate,demoMoney,readAdminDemo,updateAdminRecord} from './adminDemoData'
 
 const badgeTone = s => ['Active','Verified','Published','Paid','Resolved','Confirmed'].includes(s)?'confirmed':['Rejected','Suspended','Cancelled','Hidden','Inactive','Refunded'].includes(s)?'cancelled':s==='Completed'?'completed':'pending'
 const Badge = ({value}) => <span className={'badge '+badgeTone(value)}>{value}</span>
-const Field = ({label,children}) => <label className="demoField"><span>{label}</span>{children}</label>
+function Field({label,children}) {
+  const id=useId()
+  return <div className="demoField"><label htmlFor={id}>{label}</label>{React.cloneElement(children,{id})}</div>
+}
 const Metric = ({icon:Icon,label,value,meta}) => <div className="metricCard"><div className="metricIcon"><Icon/></div><div><span>{label}</span><strong>{value}</strong><small>{meta}</small></div></div>
 const initial = name => name.split(' ').filter(Boolean).slice(-2).map(n=>n[0]).join('')
 
@@ -56,7 +59,7 @@ function Table({labels,rows,values,onOpen,action='Manage',type}) {
 }
 
 export function AdminDemoWorkspace({title='Medora control center',subtitle='Monitor access, care operations and platform activity.',type='overview'}) {
-  const [data,setData] = useState(()=>readAdminDemo(window.localStorage))
+  const [data,setData] = useState(()=>readAdminDemo())
   const [query,setQuery] = useState('')
   const [status,setStatus] = useState('All')
   const [editor,setEditor] = useState(null)

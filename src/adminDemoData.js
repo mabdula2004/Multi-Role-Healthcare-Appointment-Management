@@ -54,7 +54,7 @@ export function createAdminDemo(now = new Date()) {
 
 export function readAdminDemo(storage) {
   try {
-    const saved = JSON.parse(storage?.getItem(ADMIN_DEMO_KEY) || 'null')
+    const saved = JSON.parse((storage ?? globalThis.localStorage)?.getItem(ADMIN_DEMO_KEY) || 'null')
     if (saved?.version === 1 && ['users','appointments','specialties','reviews','payments','support','audit'].every(k=>Array.isArray(saved[k]))) return saved
   } catch { /* A blocked or outdated browser store falls back to fresh synthetic data. */ }
   return createAdminDemo()

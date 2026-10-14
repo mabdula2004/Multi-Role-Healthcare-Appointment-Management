@@ -12,7 +12,7 @@ const navigate=async(page,label)=>{
 }
 const noOverflow=async page=>expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true)
 
-test('all eleven admin links switch content in the same browser session',async({page})=>{
+test('all eleven admin links switch content in the same browser session',async({page},testInfo)=>{
   await page.goto('/admin')
   const checks=[
     ['Overview','overview','Doctor verification queue'],['Doctors','doctors','Dr. Hira Sheikh'],
@@ -29,6 +29,7 @@ test('all eleven admin links switch content in the same browser session',async({
     await expect(section.getByText(content,{exact:true}).first()).toBeVisible()
     await expect(page.locator('.sidebar nav a.active')).toHaveCount(1)
     await noOverflow(page)
+    await page.screenshot({path:testInfo.outputPath('admin-'+type+'.png'),fullPage:true})
   }
   await navigate(page,'Patients')
   await expect(page.getByTestId('admin-section-patients')).not.toContainText('Dr. Sarah Malik')
