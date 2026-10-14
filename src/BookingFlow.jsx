@@ -5,7 +5,7 @@ import { useCare } from './CareContext'
 import { doctors as demoDoctors } from './data'
 import { bookAppointment, careDate, careDateLabel, careTime, listSlots } from './careApi'
 
-const money = v => new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(v)
+const money = v => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(v)
 const demoSlotTimes = ['09:00','10:30','12:00','14:30','16:00','17:30']
 const demoSlotsFor = date => demoSlotTimes.map(time => ({
   starts_at: new Date(`${date}T${time}:00+05:00`).toISOString(),
