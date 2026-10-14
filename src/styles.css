@@ -23,3 +23,60 @@
 .filterTitle{display:flex;align-items:center;justify-content:space-between;gap:12px}.filterTitle button{border:0;background:transparent;color:var(--primary);font-size:9px;font-weight:800;cursor:pointer;padding:4px 0}.filterTitle button:hover{text-decoration:underline}
 .filterPanel>label>strong{float:right;color:var(--ink)}
 @media(max-width:620px){.demoBanner{padding:9px 15px;align-items:flex-start}.filterTitle{grid-column:1/-1}}
+
+
+/* Enhanced role demo workspaces */
+.enhancedGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.careCard,.patientCard{display:flex;flex-direction:column;gap:12px}
+.careMeta,.dualActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dualActions>*{flex:1}
+.avatarText.large{width:64px;height:64px;font-size:20px}
+.detailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.detailGrid>div,.clinicalNote,.reviewLine{padding:14px;border:1px solid var(--line);background:var(--surfaceSoft,#f7f8fb);border-radius:12px}
+.detailGrid small,.detailGrid strong{display:block}
+.detailGrid strong{margin-top:4px}
+.demoModalBackdrop{position:fixed;inset:0;background:rgba(15,23,42,.58);backdrop-filter:blur(4px);z-index:200;display:grid;place-items:center;padding:18px}
+.demoModal{width:min(640px,100%);max-height:88vh;overflow:auto;background:var(--surface,#fff);border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.28)}
+.demoModalHead{display:flex;justify-content:space-between;gap:18px;padding:20px;border-bottom:1px solid var(--line)}
+.demoModalHead h3{margin:3px 0 4px;font-size:24px}
+.demoModalHead p,.demoModalHead small{margin:0;color:var(--muted)}
+.demoModalBody{padding:20px}
+.demoModalFooter{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px 20px;border-top:1px solid var(--line)}
+.demoField{display:grid;gap:7px;margin:12px 0;font-size:12px;font-weight:700}
+.demoField input,.demoField select,.demoField textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--surface,#fff);color:var(--text);padding:11px 12px}
+.demoField textarea{min-height:110px;resize:vertical}
+.demoSuccess{display:flex;align-items:center;gap:9px;margin-top:14px}
+.insuranceCard{max-width:620px}
+.notificationList{display:grid;gap:10px}
+.notificationCard{width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:12px;text-align:left;align-items:center;border:1px solid var(--line);background:var(--surface,#fff);color:var(--text);padding:14px;border-radius:13px}
+.notificationCard.unread{border-color:#8b8df6;background:rgba(91,92,240,.05)}
+.notificationCard p{margin:4px 0 0;color:var(--muted)}
+.notificationCard>span{width:8px;height:8px;border-radius:50%;background:#5b5cf0}
+.settingsPanel{background:var(--surface,#fff);border:1px solid var(--line);border-radius:16px;padding:20px}
+.settingRow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px;padding:15px 0;border-bottom:1px solid var(--line)}
+.settingRow small{display:block;margin-top:3px;color:var(--muted)}
+.demoSwitch{width:48px;height:27px;border:0;border-radius:99px;background:#dfe3eb;padding:3px}
+.demoSwitch i{display:block;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.16);transition:.2s}
+.demoSwitch.on{background:#5b5cf0}
+.demoSwitch.on i{transform:translateX(21px)}
+.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.profileHero{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.twoPane{display:grid;grid-template-columns:1fr 1.35fr;gap:16px}
+.vitalsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.availabilityGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.mutedPanel{opacity:.72}
+.labResultHero{display:flex;align-items:center;gap:16px;padding:20px;background:var(--surfaceSoft,#f7f8fb);border-radius:14px}
+.labResultHero strong{font-size:24px}
+.demoBars{height:230px;display:flex;align-items:flex-end;gap:8px;padding:25px 0 20px}
+.demoBars i{position:relative;flex:1;min-height:16px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#7b7cf4,#4f51d8)}
+.demoBars i span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted)}
+.progressRow{margin:16px 0}
+.progressRow>div{display:flex;justify-content:space-between;font-size:13px}
+.progressRow>i{display:block;height:8px;background:#e9ebf1;border-radius:99px;overflow:hidden;margin-top:7px}
+.progressRow>i>span{display:block;height:100%;background:#5b5cf0;border-radius:99px}
+.reviewLine{display:flex;justify-content:space-between;gap:14px;margin:8px 0}
+.profilePreview{text-align:center}
+.searchBox{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface,#fff);border-radius:10px;padding:0 10px}
+.searchBox input{border:0;outline:0;background:transparent;padding:10px 0;color:var(--text)}
+@media(max-width:900px){.enhancedGrid,.twoPane{grid-template-columns:1fr}.availabilityGrid{grid-template-columns:1fr 1fr}.detailGrid{grid-template-columns:1fr}.formGrid{grid-template-columns:1fr}}
+@media(max-width:620px){.availabilityGrid{grid-template-columns:1fr}.demoModalBackdrop{padding:8px}.demoModal{max-height:94vh}.dualActions{flex-direction:column}.dualActions>*{width:100%}.notificationCard{grid-template-columns:auto 1fr}}
