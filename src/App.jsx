@@ -7,14 +7,15 @@ import {
   ShieldCheck, Sparkles, Stethoscope, TestTube2, UserRound, Users, WalletCards, X, Star, MapPin, Video,
   CheckCircle2, AlertCircle, TrendingUp, BadgeCheck, UserCog, BarChart3, LifeBuoy, History, Building2
 } from 'lucide-react'
-import { appointments, doctors as demoDoctors, specialties, adminStats } from './data'
+import { appointments, doctors as demoDoctors, specialties } from './data'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { CareProvider, useCare } from './CareContext'
 import { getProfile } from './careApi'
 import BookingFlow from './BookingFlow'
 import LiveAppointments from './LiveAppointments'
 import { PatientBackendDashboard, PatientBackendWorkspace, DoctorBackendDashboard, DoctorBackendWorkspace, AdminBackendDashboard, AdminBackendWorkspace } from './PortalBackends'
-import { EnhancedPatientWorkspace, EnhancedDoctorWorkspace, EnhancedAdminWorkspace } from './EnhancedDemoWorkspaces'
+import { EnhancedPatientWorkspace, EnhancedDoctorWorkspace } from './EnhancedDemoWorkspaces'
+import { AdminDemoWorkspace } from './AdminDemoWorkspace'
 import { createSupportRequest } from './portalApi'
 
 const doctors = demoDoctors
@@ -309,36 +310,12 @@ function PrescriptionEditor(){
 function EarningsView(){return <div className="billingGrid"><Metric icon={CircleDollarSign} label="October earnings" value="£3.2K" meta="+8.4% vs September"/><Metric icon={CalendarCheck} label="Completed visits" value="92" meta="This month"/><Metric icon={WalletCards} label="Next settlement" value="£620" meta="Oct 7"/><div className="panel span2"><SectionTitle title="Settlement history"/><div className="listRows"><div><span>Sep 30 settlement</span><strong>£2,580</strong><small>Paid</small></div><div><span>Sep 15 settlement</span><strong>£1,220</strong><small>Paid</small></div></div></div></div>}
 function DoctorProfileEditor(){return <div className="profileEditor"><img src={doctors[0].image} alt=""/><ProfileForm/></div>}
 
-function AdminDashboard(){return <RoleShell role="admin" nav={adminNav}><div className="welcomeLine"><div><span className="eyebrow">Platform operations</span><h2>Medora control center.</h2><p>Monitor access, care operations and platform health.</p></div><Link className="btn btn-primary" to="/admin/users"><Plus/>Invite clinician</Link></div><div className="metricsGrid">{adminStats.map((x,i)=><Metric key={x[0]} icon={[Users,Stethoscope,Calendar,TrendingUp][i]} label={x[0]} value={x[1]} meta={x[2]}/>)}</div><div className="dashboardGrid"><section className="panel span2"><SectionTitle title="Doctor verification queue" action="Manage doctors"/><div className="verificationList">{[['Dr. Hira Sheikh','Endocrinology','Credentials received'],['Dr. Ali Raza','ENT','License check pending'],['Dr. Maha Khan','Gynecology','Ready for approval']].map((x,i)=><div key={x[0]}><span className="avatarText">{x[0].split(' ').slice(1).map(n=>n[0]).join('')}</span><div><strong>{x[0]}</strong><small>{x[1]} · {x[2]}</small></div><span className={cls('badge',i===2?'confirmed':'pending')}>{i===2?'Ready':'Review'}</span><Link to="/admin/doctors">Open</Link></div>)}</div></section><section className="panel"><SectionTitle title="System health"/><div className="healthList"><div><span className="greenDot"/><div><strong>Authentication</strong><small>Operational</small></div></div><div><span className="greenDot"/><div><strong>Appointments</strong><small>Operational</small></div></div><div><span className="greenDot"/><div><strong>Messaging</strong><small>Operational</small></div></div></div></section><section className="panel span2"><SectionTitle title="Appointment volume"/><div className="bigChart"><div className="lineMock"><span/><span/><span/><span/><span/><span/><span/></div><div className="chartLabels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div></div></section><section className="panel"><SectionTitle title="Open support"/><div className="supportStats"><strong>18</strong><p>tickets awaiting response</p><span>Median first response: 14m</span></div></section></div></RoleShell>}
+function AdminDashboard(){return <RoleShell role="admin" nav={adminNav}><AdminDemoWorkspace key="overview"/></RoleShell>}
 
 const adminCollections={
  '/admin/doctors':['Doctors','Verification, status and clinician profile management.','doctors'], '/admin/patients':['Patients','Patient account and support overview.','patients'], '/admin/appointments':['Appointments','Platform-wide appointment operations.','appointments'], '/admin/specialties':['Specialties','Clinical specialty directory management.','specialties'], '/admin/reviews':['Reviews','Moderate patient feedback and reported reviews.','reviews'], '/admin/payments':['Payments','Invoices, refunds and settlements.','payments'], '/admin/analytics':['Analytics','Operational growth and care activity.','analytics'], '/admin/support':['Support','Patient and clinician support requests.','support'], '/admin/users':['User status','Account states, verification and access controls.','users'], '/admin/audit':['Audit activity','High-sensitivity administrative activity log.','audit']
 }
-function AdminCollection(){const c=adminCollections[useLocation().pathname]; return <RoleShell role="admin" nav={adminNav}><EnhancedAdminWorkspace title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
-function AdminWorkspace({title,subtitle,type}){
- const baseRows=type==='doctors'?doctors.map(d=>[d.name,d.specialty,d.location,'Verified']):type==='specialties'?specialties.map((s,i)=>[s[0],s[1],(18+i*7)+' doctors','Active']):[['Amina Khan','Patient','Lahore','Active'],['Hassan Ali','Patient','Lahore','Active'],['Dr. Sarah Malik','Doctor','Lahore','Verified'],['Dr. Hira Sheikh','Doctor','Karachi','Review']]
- const [rows,setRows]=useState(baseRows)
- const [query,setQuery]=useState('')
- const [notice,setNotice]=useState('')
- const filtered=rows.filter(r=>r.join(' ').toLowerCase().includes(query.toLowerCase()))
- const add=()=>{
-   const item=type==='specialties'?['Demo Specialty '+(rows.length+1),'Synthetic specialty','0 doctors','Active']:type==='doctors'?['Dr. Demo '+(rows.length+1),'General Medicine','Lahore','Review']:['Demo User '+(rows.length+1),'Patient','Lahore','Active']
-   setRows(v=>[item,...v]);setNotice('Synthetic item added to the admin preview.')
- }
- const manage=target=>{
-   setRows(v=>v.map(r=>r===target?[r[0],r[1],r[2],r[3]==='Active'?'Suspended':r[3]==='Verified'?'Review':'Active']:r))
-   setNotice('Demo status updated. No real account was changed.')
- }
- const exportCsv=()=>{
-   const csv=['Name,Type,Context,Status',...filtered.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(','))].join('\n')
-   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}))
-   const a=document.createElement('a');a.href=url;a.download='medora-'+type+'-demo.csv';a.click();URL.revokeObjectURL(url);setNotice('Demo CSV export generated.')
- }
- return <><div className="contentHeader"><div><h2>{title}</h2><p>{subtitle}</p></div>{type!=='analytics'&&<Button type="button" onClick={add}><Plus/>Add new</Button>}</div>{notice&&<div className="notice"><p>{notice}</p></div>}{type==='analytics'?<AdminAnalytics/>:<div className="tablePanel"><div className="adminToolbar"><div><Search/><input aria-label={'Search '+title} value={query} onChange={e=>setQuery(e.target.value)} placeholder={'Search '+title.toLowerCase()+'…'}/></div><Button type="button" variant="secondary" onClick={exportCsv}>Export</Button></div><div className="responsiveTable"><div className="tableRow tableHead"><span>Name</span><span>Type / specialty</span><span>Context</span><span>Status</span><span></span></div>{filtered.map((r,i)=><div className="tableRow" key={r[0]+i}><span><strong>{r[0]}</strong><small>ID {1000+i*83}</small></span><span>{r[1]}</span><span>{r[2]}</span><span><span className={cls('badge',r[3].toLowerCase())}>{r[3]}</span></span><span><button type="button" onClick={()=>manage(r)}>Manage</button></span></div>)}</div></div>}</>
-}
-function AdminAnalytics(){return <div className="analyticsGrid"><Metric icon={Users} label="New patients" value="1,204" meta="Last 30 days"/><Metric icon={CalendarCheck} label="Booking conversion" value="71.8%" meta="+4.3 pts"/><Metric icon={Video} label="Video share" value="38%" meta="of consultations"/><Metric icon={Star} label="Avg. review" value="4.82" meta="12,860 ratings"/><section className="panel span2"><SectionTitle title="Monthly appointment trend"/><div className="bigChart tall"><div className="areaMock"></div></div></section><section className="panel span2"><SectionTitle title="Top specialties"/><div className="progressList">{[['General Medicine',84],['Cardiology',72],['Dermatology',64],['Pediatrics',58],['Psychiatry',49]].map(x=><div key={x[0]}><span>{x[0]}</span><div><i style={{width:`${x[1]}%`}}/></div><strong>{x[1]}%</strong></div>)}</div></section></div>}
-
-
+function AdminCollection(){const c=adminCollections[useLocation().pathname]; return <RoleShell role="admin" nav={adminNav}><AdminDemoWorkspace key={c[2]} title={c[0]} subtitle={c[1]} type={c[2]}/></RoleShell>}
 function LiveRoleState({role,nav,children,demo}){
   const {session,profile,authLoading,authError}=useCare()
   if(authLoading)return <div className="portalLoading"><p>Loading secure workspace…</p></div>
@@ -353,7 +330,7 @@ function PatientCollectionRoute(){const cfg=patientCollections[useLocation().pat
 function DoctorHomeRoute(){return <LiveRoleState role="doctor" nav={doctorNav} demo={<DoctorDashboard/>}><DoctorBackendDashboard/></LiveRoleState>}
 function DoctorCollectionRoute(){const cfg=doctorCollections[useLocation().pathname]||doctorCollections['/doctor/appointments'];return <LiveRoleState role="doctor" nav={doctorNav} demo={<DoctorCollection/>}><DoctorBackendWorkspace type={cfg[2]}/></LiveRoleState>}
 function AdminHomeRoute(){return <LiveRoleState role="admin" nav={adminNav} demo={<AdminDashboard/>}><AdminBackendDashboard/></LiveRoleState>}
-function AdminCollectionRoute(){const cfg=adminCollections[useLocation().pathname]||adminCollections['/admin/users'];return <LiveRoleState role="admin" nav={adminNav} demo={<AdminCollection/>}><AdminBackendWorkspace type={cfg[2]}/></LiveRoleState>}
+function AdminCollectionRoute(){const cfg=adminCollections[useLocation().pathname]||adminCollections['/admin/users'];return <LiveRoleState role="admin" nav={adminNav} demo={<AdminCollection/>}><AdminBackendWorkspace key={cfg[2]} type={cfg[2]}/></LiveRoleState>}
 
 function NotFound(){return <div className="notFound"><Logo/><span>404</span><h1>This page isn’t part of the care journey.</h1><p>Use the main navigation to return to a supported Medora experience.</p><Link className="btn btn-primary" to="/">Back home</Link></div>}
 

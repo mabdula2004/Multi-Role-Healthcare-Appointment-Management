@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from 'react'
+import React,{useState} from 'react'
 import {
   Activity,AlertCircle,ArrowRight,BadgeCheck,Bell,Calendar,Check,CheckCircle2,Clock3,CreditCard,
   Download,FileHeart,FileText,History,LifeBuoy,LockKeyhole,MapPin,MessageCircle,Pill,Plus,Search,
@@ -123,80 +123,4 @@ export function EnhancedDoctorWorkspace({title,subtitle,type}){
   if(type==='doctorsettings')return <><Header title={title} subtitle={subtitle}/><div className="settingsPanel">{[['New appointment alerts','Receive notifications for requests'],['Daily schedule digest','Morning clinical summary'],['Secure message alerts','Notify for new patient messages'],['Auto-lock clinical workspace','Lock after inactivity']].map((x,i)=><div className="settingRow" key={x[0]}><div><strong>{x[0]}</strong><small>{x[1]}</small></div><button className={cls('demoSwitch',i<3&&'on')} onClick={e=>e.currentTarget.classList.toggle('on')}><i/></button></div>)}<Btn onClick={()=>setNotice('Doctor workspace preferences saved.')}>Save settings</Btn></div><Notice text={notice}/></>
 
   return <Header title={title} subtitle={subtitle}/>
-}
-
-const adminFixtures={
- doctors:[
-  ['Dr. Sarah Malik','Cardiology','Lahore','Verified'],['Dr. Hamza Qureshi','Dermatology','Lahore','Verified'],['Dr. Hira Sheikh','Neurology','Karachi','Review'],['Dr. Bilal Ahmed','Orthopedics','Islamabad','Verified']
- ],
- patients:[
-  ['Amina Khan','PT-1042','Lahore','Active'],['Hassan Ali','PT-1031','Lahore','Active'],['Mariam Noor','PT-0998','Karachi','Review'],['Usman Tariq','PT-0974','Islamabad','Active']
- ],
- appointments:[
-  ['APT-8821','Amina Khan · Dr. Sarah Malik','Oct 15 · 5:30 PM','Confirmed'],['APT-8814','Hassan Ali · Dr. Sarah Malik','Oct 14 · 4:15 PM','Checked in'],['APT-8799','Mariam Noor · Dr. Hamza Qureshi','Oct 14 · 7:00 PM','Video']
- ],
- specialties:[
-  ['Cardiology','42 doctors','1,284 appointments','Active'],['Dermatology','31 doctors','918 appointments','Active'],['Pediatrics','28 doctors','807 appointments','Active'],['Neurology','19 doctors','521 appointments','Active']
- ],
- reviews:[
-  ['REV-104','Amina Khan → Dr. Sarah Malik','5 stars','Published'],['REV-102','Mariam Noor → Dr. Hamza Qureshi','2 stars','Reported'],['REV-099','Hassan Ali → Dr. Sarah Malik','4 stars','Published']
- ],
- payments:[
-  ['INV-1048','Amina Khan','£35','Paid'],['INV-1041','Hassan Ali','£35','Paid'],['INV-1034','Mariam Noor','£28','Refund review']
- ],
- support:[
-  ['SUP-482','Amina Khan','Appointment reschedule','Open'],['SUP-479','Dr. Hira Sheikh','Verification document','In progress'],['SUP-471','Hassan Ali','Invoice clarification','Resolved']
- ],
- users:[
-  ['USR-1042','Amina Khan','Patient','Active'],['USR-1017','Dr. Sarah Malik','Doctor','Active'],['USR-1008','Dr. Hira Sheikh','Doctor','Review'],['USR-0992','Support Admin','Admin','Active']
- ],
- audit:[
-  ['14:12:06','admin@medora.demo','Verified doctor','Dr. Sarah Malik'],['13:58:44','system','Flagged review','REV-102'],['13:31:20','support@medora.demo','Resolved ticket','SUP-471'],['12:49:03','admin@medora.demo','Updated specialty','Cardiology']
- ]
-}
-
-export function EnhancedAdminWorkspace({title,subtitle,type}){
-  const[rows,setRows]=useState(adminFixtures[type]||[])
-  const[query,setQuery]=useState('')
-  const[notice,setNotice]=useState('')
-  const[modal,setModal]=useState(null)
-  const filtered=useMemo(()=>rows.filter(r=>r.join(' ').toLowerCase().includes(query.toLowerCase())),[rows,query])
-
-  if(type==='analytics')return <><Header title={title} subtitle={subtitle}/><div className="metricsGrid"><Metric label="Active patients" value="12,842" meta="+6.4% this month"/><Metric label="Verified doctors" value="684" meta="23 awaiting review"/><Metric label="Appointments" value="5,931" meta="Last 30 days"/><Metric label="Completion rate" value="92.6%" meta="+1.8%"/></div><div className="twoPane"><div className="panel"><h3>Appointment volume</h3><div className="demoBars">{[45,62,58,76,81,69,94,88,97,90,100,96].map((v,i)=><i key={i} style={{height:v+'%'}}><span>{i+1}</span></i>)}</div></div><div className="panel"><h3>Care mix</h3>{[['Cardiology',34],['Dermatology',24],['Pediatrics',19],['Other',23]].map(x=><div className="progressRow" key={x[0]}><div><span>{x[0]}</span><b>{x[1]}%</b></div><i><span style={{width:x[1]+'%'}}/></i></div>)}</div></div></>
-
-  const labels={
-    doctors:['Doctor','Specialty','Location','Verification'],
-    patients:['Patient','Patient ID','Location','Status'],
-    appointments:['Appointment','Participants','Schedule','Status'],
-    specialties:['Specialty','Clinicians','Activity','Status'],
-    reviews:['Review','Relationship','Rating','Status'],
-    payments:['Invoice','Patient','Amount','Status'],
-    support:['Ticket','Requester','Subject','Status'],
-    users:['User ID','Account','Role','Status'],
-    audit:['Time','Actor','Action','Target']
-  }[type]||['Item','Type','Context','Status']
-
-  const add=()=>{
-    const templates={
-      doctors:['Dr. Demo Clinician','General Medicine','Lahore','Review'],
-      patients:['Demo Patient','PT-NEW','Lahore','Active'],
-      appointments:['APT-NEW','Demo Patient · Dr. Demo','Tomorrow · 10:00 AM','Pending'],
-      specialties:['Demo Specialty','0 doctors','0 appointments','Active'],
-      reviews:['REV-NEW','Demo Patient → Dr. Demo','5 stars','Review'],
-      payments:['INV-NEW','Demo Patient','£30','Pending'],
-      support:['SUP-NEW','Demo User','New support request','Open'],
-      users:['USR-NEW','Demo User','Patient','Active'],
-      audit:['Now','admin@medora.demo','Demo action','Synthetic target']
-    }
-    const item=templates[type];if(item){setRows(v=>[item,...v]);setNotice('Synthetic item added to '+title.toLowerCase()+' demo.')}
-  }
-  const toggle=(row)=>{
-    if(type==='audit'){setModal({kind:'detail',data:row});return}
-    const next=row[3]==='Active'?'Suspended':row[3]==='Verified'?'Review':row[3]==='Paid'?'Refund review':row[3]==='Published'?'Hidden':row[3]==='Resolved'?'Open':'Active'
-    setRows(v=>v.map(r=>r===row?[...r.slice(0,3),next]:r));setNotice('Demo status changed to '+next+'.')
-  }
-  const exportCsv=()=>{setNotice(title+' CSV export prepared in demo mode.')}
-
-  return <><Header title={title} subtitle={subtitle} action={type!=='audit'?<Btn onClick={add}><Plus size={15}/>Add new</Btn>:null}/><div className="tablePanel"><div className="adminToolbar"><div className="searchBox"><Search/><input aria-label={'Search '+title} value={query} onChange={e=>setQuery(e.target.value)} placeholder={'Search '+title.toLowerCase()}/></div><Btn variant="secondary" onClick={exportCsv}><Download size={15}/>Export</Btn></div><div className="responsiveTable"><div className="tableRow tableHead">{labels.map(x=><span key={x}>{x}</span>)}<span>Action</span></div>{filtered.map((r,i)=><div className="tableRow" key={i}>{r.map((x,j)=><span key={j}>{j===0?<strong>{x}</strong>:j===3?<Status tone={String(x).toLowerCase().includes('active')||String(x).toLowerCase().includes('verified')||String(x).toLowerCase().includes('paid')||String(x).toLowerCase().includes('published')||String(x).toLowerCase().includes('resolved')?'confirmed':'pending'}>{x}</Status>:x}</span>)}<span><button onClick={()=>{if(type!=='audit'){toggle(r);setNotice('Demo status updated. No real account or record was changed.')}setModal({kind:'manage',data:r,index:i})}}>{type==='audit'?'Inspect':'Manage'}</button></span></div>)}</div></div><Notice text={notice}/>
-  <Modal open={modal?.kind==='manage'} title={(modal?.data?.[0]||title)+' details'} subtitle={title+' management'} onClose={()=>setModal(null)} footer={<>{type!=='audit'&&<Btn variant="secondary" onClick={()=>{toggle(modal.data);setModal(null)}}>Change status</Btn>}<Btn onClick={()=>{setNotice('Demo '+title.toLowerCase()+' review completed.');setModal(null)}}>{type==='audit'?'Close inspection':'Save review'}</Btn></>}><div className="detailGrid">{labels.map((label,i)=><div key={label}><small>{label}</small><strong>{modal?.data?.[i]}</strong></div>)}</div>{type==='doctors'&&<p>Credential documents, license verification and profile completeness would be reviewed here.</p>}{type==='appointments'&&<p>Admin can review schedule ownership, consultation mode, status history and support flags.</p>}{type==='support'&&<Field label="Internal note"><textarea defaultValue="Reviewed synthetic support request."/></Field>}{type==='reviews'&&<Field label="Moderation note"><textarea defaultValue="Review checked against content guidelines."/></Field>}</Modal></>
 }

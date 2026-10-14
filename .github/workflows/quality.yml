@@ -24,6 +24,8 @@ jobs:
         run: npm install --ignore-scripts
       - name: Production build
         run: npm run build
+      - name: Admin data and persistence regression checks
+        run: npm run test:admin
       - name: Install Chromium and ffmpeg
         run: |
           npx playwright install --with-deps chromium

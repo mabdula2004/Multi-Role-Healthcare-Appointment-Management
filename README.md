@@ -183,7 +183,9 @@ Demo mode lets a reviewer safely test representative interactions such as:
 - Patient booking, rescheduling, cancellation and review states.
 - Patient messages, records, prescriptions, labs, insurance, profile and settings.
 - Doctor appointment requests, availability, consultation notes and prescription workflows.
-- Admin add/search/manage/export interactions.
+- Eleven distinct admin sections with dedicated layouts, search/status filters, editable review dialogs and real CSV exports.
+- Admin demo changes persist locally across navigation and reloads. Doctors, Patients and User status share account records; Overview and Analytics derive their totals from those records. Saved changes create read-only audit events.
+- Opening or cancelling a management dialog never changes a record. Each section uses its own valid statuses; synthetic invoice updates do not process payments or refunds.
 - Responsive Patient, Doctor and Admin dashboards.
 
 Synthetic preview data is explicitly marked as demo data. Browser-only demo booking data does not create a real health record.

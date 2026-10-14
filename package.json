@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test:e2e": "playwright test",
+    "test:admin": "node --test tests/admin-demo.test.js",
     "test:backend": "node tests/backend-qa.mjs",
     "test:booking": "node tests/live-booking-qa.mjs"
   },
