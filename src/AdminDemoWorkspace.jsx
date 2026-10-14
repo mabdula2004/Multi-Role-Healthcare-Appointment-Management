@@ -55,7 +55,7 @@ function Editor({type,record,isNew,specialties,onSave,onClose}) {
 }
 
 function Table({labels,rows,values,onOpen,action='Manage',type}) {
-  return <div className="adminTableScroll"><table className="adminDataTable" data-testid={'admin-table-'+type}><thead><tr>{labels.map(l=><th key={l} scope="col">{l}</th>)}<th scope="col">Action</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}>{values(r).map((v,i)=><td key={i}>{i===labels.length-1?<Badge value={v}/>:v}</td>)}<td><button className="btn btn-ghost" aria-label={action+' '+r.id} onClick={()=>onOpen(r)}>{action}</button></td></tr>)}</tbody></table></div>
+  return <div className="adminTableScroll"><table className="adminDataTable" data-testid={'admin-table-'+type}><thead><tr>{labels.map(l=><th key={l} scope="col">{l}</th>)}<th scope="col">Action</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}>{values(r).map((v,i)=><td key={i} data-label={labels[i]}>{i===labels.length-1?<Badge value={v}/>:v}</td>)}<td data-label="Action"><button className="btn btn-ghost" aria-label={action+' '+r.id} onClick={()=>onOpen(r)}>{action}</button></td></tr>)}</tbody></table></div>
 }
 
 export function AdminDemoWorkspace({title='Medora control center',subtitle='Monitor access, care operations and platform activity.',type='overview'}) {

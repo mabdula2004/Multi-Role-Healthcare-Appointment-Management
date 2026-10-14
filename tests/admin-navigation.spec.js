@@ -29,7 +29,7 @@ test('all eleven admin links switch content in the same browser session',async({
     await expect(section.getByText(content,{exact:true}).first()).toBeVisible()
     await expect(page.locator('.sidebar nav a.active')).toHaveCount(1)
     await noOverflow(page)
-    await page.screenshot({path:testInfo.outputPath('admin-'+type+'.png'),fullPage:true})
+    await page.screenshot({path:testInfo.outputPath('admin-'+type+'.png'),fullPage:true,animations:'disabled'})
   }
   await navigate(page,'Patients')
   await expect(page.getByTestId('admin-section-patients')).not.toContainText('Dr. Sarah Malik')
